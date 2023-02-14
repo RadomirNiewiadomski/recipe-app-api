@@ -34,7 +34,7 @@ def detail_url(recipe_id):
 
 
 def image_upload_url(recipe_id):
-    """Create and return an image upload recipe."""
+    """Create and return an image upload URL."""
     return reverse('recipe:recipe-upload-image', args=[recipe_id])
 
 
@@ -58,7 +58,7 @@ def create_user(**params):
     return get_user_model().objects.create_user(**params)
 
 
-class PublicRecipeAPITests(TestCase):
+class PublicRecipeApiTests(TestCase):
     """Test unauthenticated API requests."""
 
     def setUp(self):
@@ -380,14 +380,56 @@ class PrivateRecipeAPITests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.ingredients.count(), 0)
 
+    def test_filter_by_tags(self):
+        """Test filtering recipes by tags."""
+        r1 = create_recipe(user=self.user, title='Fried vegetables')
+        r2 = create_recipe(user=self.user, title='Egg salad')
+        t1 = Tag.objects.create(user=self.user, name='Vegetarian')
+        t2 = Tag.objects.create(user=self.user, name='Vegan')
+        r1.tags.add(t2)
+        r2.tags.add(t1)
+        r3 = create_recipe(user=self.user, title='Fish and chips')
+
+        params = {'tags': f'{t1.id},{t2.id}'}
+        res = self.client.get(RECIPES_URL, params)
+
+        s1 = RecipeSerializer(r1)
+        s2 = RecipeSerializer(r2)
+        s3 = RecipeSerializer(r3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+
+    def test_filter_by_ingredients(self):
+        """Test filtering recipes by ingredients."""
+        r1 = create_recipe(user=self.user, title='Fried vegetables')
+        r2 = create_recipe(user=self.user, title='Egg salad')
+        i1 = Ingredient.object.create(user=self.user, name='Carrot')
+        i2 = Ingredient.object.create(user=self.user, name='Egg')
+        r1.ingredients.add(i1)
+        r2.ingredients.add(i2)
+        r3 = create_recipe(user=self.user, title='Fish and chips')
+
+        params = {'ingredients': f'{i1.id}.{i2.id}'}
+        res = self.client.get(RECIPES_URL, params)
+
+        s1 = RecipeSerializer(r1)
+        s2 = RecipeSerializer(r2)
+        s3 = RecipeSerializer(r3)
+        self.assertIn(s1.data, res.data)
+        self.assertIn(s2.data, res.data)
+        self.assertNotIn(s3.data, res.data)
+
 
 class ImageUploadTests(TestCase):
     """Tests for the image upload API."""
 
     def setUp(self):
         self.client = APIClient()
-        self.user = create_user(
-            email='user@example.com', password='testpass123')
+        self.user = get_user_model().objects.create_user(
+            'user@example.com',
+            'testpass123'
+        )
         self.client.force_authenticate(self.user)
         self.recipe = create_recipe(user=self.user)
 
