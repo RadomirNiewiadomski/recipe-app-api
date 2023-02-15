@@ -404,13 +404,13 @@ class PrivateRecipeAPITests(TestCase):
         """Test filtering recipes by ingredients."""
         r1 = create_recipe(user=self.user, title='Fried vegetables')
         r2 = create_recipe(user=self.user, title='Egg salad')
-        i1 = Ingredient.object.create(user=self.user, name='Carrot')
-        i2 = Ingredient.object.create(user=self.user, name='Egg')
+        i1 = Ingredient.objects.create(user=self.user, name='Carrot')
+        i2 = Ingredient.objects.create(user=self.user, name='Egg')
         r1.ingredients.add(i1)
         r2.ingredients.add(i2)
         r3 = create_recipe(user=self.user, title='Fish and chips')
 
-        params = {'ingredients': f'{i1.id}.{i2.id}'}
+        params = {'ingredients': f'{i1.id},{i2.id}'}
         res = self.client.get(RECIPES_URL, params)
 
         s1 = RecipeSerializer(r1)
